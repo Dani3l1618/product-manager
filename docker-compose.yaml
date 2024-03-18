@@ -1,0 +1,69 @@
+version: "3.9"
+services:
+  database: 
+    # container_name: managerapp_database
+    image: postgres
+    env_file:
+      - ./env/database.env
+    volumes:
+      - postgres:/data/postgres
+    ports:
+      - "5432:5432"
+    expose:
+      - 5432
+    networks:
+      - managerapp
+
+  liquibase:
+    image: daguilar08/product-manager:liquibase
+    depends_on:
+      - database
+    networks:
+      - managerapp
+
+  keycloak:
+    image: daguilar08/product-manager:keycloak
+    env_file:
+      - ./env/keycloak.env
+    networks:
+      - managerapp
+    depends_on:
+      - database
+    volumes:
+      - ./env:/opt/keycloak/data/import
+    ports:
+      - 8082:8080
+      - 8443:8443
+
+
+  product-service:
+    # container_name: product_service
+    image: daguilar08/product-manager:product-service
+    env_file:
+      - ./env/service.env
+    ports:
+      - "3070:3070"
+    depends_on:
+      - database
+      - keycloak
+    networks:
+      - managerapp
+  
+  frontend:
+    image: daguilar08/product-manager:frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - database
+      - keycloak
+      - product-service
+    networks:
+      - managerapp
+
+volumes:
+  postgres:
+
+networks:
+  managerapp:
+    driver: bridge
+    name: managerapp
